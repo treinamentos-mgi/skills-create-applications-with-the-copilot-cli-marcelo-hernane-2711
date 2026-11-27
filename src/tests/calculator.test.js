@@ -1,6 +1,6 @@
 const { execFileSync, spawnSync } = require('child_process');
 const path = require('path');
-const { addition, subtraction, multiplication, division } = require('../calculator');
+const { addition, subtraction, multiplication, division, modulo, exponentiation, squareRoot } = require('../calculator');
 
 const CLI = path.join(__dirname, '..', 'calculator.js');
 
@@ -47,6 +47,30 @@ describe('division', () => {
   });
 });
 
+describe('modulo', () => {
+  test('resto da divisão', () => expect(modulo(10, 3)).toBe(1));
+  test('dividendo negativo', () => expect(modulo(-10, 3)).toBe(-1));
+  test('divisor zero lança erro', () => expect(() => modulo(10, 0)).toThrow('Módulo por zero'));
+});
+
+describe('exponentiation', () => {
+  test('expoente positivo', () => expect(exponentiation(2, 3)).toBe(8));
+  test('expoente negativo', () => expect(exponentiation(2, -2)).toBe(0.25));
+  test('expoente zero', () => expect(exponentiation(2, 0)).toBe(1));
+  test('zero elevado a expoente negativo lança erro', () => {
+    expect(() => exponentiation(0, -1)).toThrow('expoente negativo');
+  });
+  test('base negativa e expoente fracionário lançam erro', () => {
+    expect(() => exponentiation(-1, 0.5)).toThrow('resultado real');
+  });
+});
+
+describe('squareRoot', () => {
+  test('raiz quadrada', () => expect(squareRoot(9)).toBe(3));
+  test('raiz de zero', () => expect(squareRoot(0)).toBe(0));
+  test('número negativo lança erro', () => expect(() => squareRoot(-1)).toThrow('número negativo'));
+});
+
 describe('CLI', () => {
   const run = (...args) => spawnSync('node', [CLI, ...args], { encoding: 'utf8' });
 
@@ -55,6 +79,9 @@ describe('CLI', () => {
     [['subtract', '10', '4'], '6'],
     [['multiply', '45', '2'], '90'],
     [['divide', '20', '5'], '4'],
+    [['modulo', '10', '3'], '1'],
+    [['power', '2', '3'], '8'],
+    [['sqrt', '9'], '3'],
   ])('%j imprime %s', (args, expected) => {
     expect(execFileSync('node', [CLI, ...args], { encoding: 'utf8' }).trim()).toBe(expected);
   });
@@ -63,6 +90,20 @@ describe('CLI', () => {
     const r = run('divide', '1', '0');
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('Divisão por zero');
+  });
+
+  test.each([
+    [['modulo', '1', '0'], 'Módulo por zero'],
+    [['power', '0', '-1'], 'expoente negativo'],
+    [['power', '-1', '0.5'], 'resultado real'],
+    [['sqrt', '-1'], 'número negativo'],
+    [['sqrt', 'x'], 'números válidos'],
+    [['sqrt'], 'Argumentos ausentes'],
+    [['power', '2'], 'Argumentos ausentes'],
+  ])('%j retorna erro e código 1', (args, expected) => {
+    const r = run(...args);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain(expected);
   });
 
   test('operando não numérico', () => {
@@ -78,7 +119,7 @@ describe('CLI', () => {
   });
 
   test('operação inválida', () => {
-    const r = run('power', '1', '2');
+    const r = run('unknown', '1', '2');
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('Operação inválida');
   });
